@@ -479,3 +479,163 @@ struct User {
 方法、函数不同之处
 - 方法是在struct上下文定义
 - 第一个参数是self，表示方法被调用的struct实例
+
+```rust
+fn main() {
+    let email = String::from("acb@126.com");
+    let username = String::from("Nikky");
+    // 语法糖
+    let user1 = User {
+        email,
+        username,
+        active: true,
+    };
+    println!(
+        "Hello, User,{},{},{}",
+        user1.email, user1.username, user1.active
+    );
+    let _user2 = User {
+        email: String::from("acb@126.com"),
+        username: String::from("Nikky"),
+        ..user1 // 基于user1创建user2  ..user1会自动补充缺少的字段
+    };
+
+    // tuple struct
+    let _black = Color(0, 0, 0);
+
+    // 计算长方形面积
+    let w = 30;
+    let l = 50;
+    println!("{}", area(w, l));
+    //计算面积 元组
+    let rect = (30, 50);
+    println!("{}", area_by_yuanzu(rect));
+    //计算面积 struct
+    let rng = Rectangle {
+        width: 30,
+        height: 50,
+    };
+    println!("{:?}", rng);
+    //Rectangle { width: 30, height: 50 }
+    println!("{:#?}", rng);
+    // Rectangle {
+    //     width: 30,
+    //     height: 50,
+    // }
+    // 使用truct的方法
+    println!("{}", rng.area_by_self());
+
+    println!("{}", area_by_struct(&rng));
+
+    // 判断是否能包含另一个长方形
+    let rng1 = Rectangle {
+        width: 10,
+        height: 20,
+    };
+    println!("{}", rng.can_hold(&rng1));
+    // 调用函数的函数
+    println!("{:?}", Rectangle::square(10));
+}
+
+struct User {
+    username: String,
+    email: String,
+    active: bool,
+}
+
+#[derive(Debug)]
+struct Rectangle {
+    width: u32,
+    height: u32,
+}
+// 每个struct 允许用友多个impl块
+impl Rectangle {
+    // 方法
+    fn area_by_self(&self) -> u32 {
+        self.width * self.height
+    }
+    fn can_hold(&self, other: &Rectangle) -> bool {
+        self.width > other.width && self.height > other.height
+    }
+    // 函数
+    fn square(size: u32) -> Rectangle {
+        Rectangle {
+            width: size,
+            height: size,
+        }
+    }
+}
+struct Color(i32, i32, i32);
+
+// 计算长方形面积
+fn area(width: u32, length: u32) -> u32 {
+    width * length
+}
+
+// 计算长方形面积元组
+fn area_by_yuanzu(dim: (u32, u32)) -> u32 {
+    dim.0 * dim.1
+}
+
+// 计算长方形面积struct
+fn area_by_struct(rng: &Rectangle) -> u32 {
+    rng.width * rng.height
+}
+
+```
+
+## Day 6 枚举与模式匹配
+
+./enum_project/
+枚举允许我们列举所有可能的值来定义一个类型
+
+
+### Option 枚举
+
+定义于标准库中
+在Prelude （预导入模块） 中
+描述了：某个值可能存在可能不存在的情况
+
+Rust中没有null,提供了类似null的概念 -  Option<T>
+
+```rust
+enum Option<T>{
+    Some(T),
+    None
+}
+// Option
+// 如果不声明 泛型 Option会自己识别
+let some_number = Some(5);
+let some_string = Some("A String");
+// 类似其他语言的null
+let absent_number: Option<i32> = None;
+
+// Option 作用是 被Option修饰的变量  类型不相等是不能相加减
+```
+### 控制流运算符match
+ 允许一个值与一系列模式进行匹配，并执行匹配的模式对应的代码
+ 模式可以是字面值、变量名、通配符
+
+```rust
+enum Coin {
+    Penny,
+    Nickel,
+}
+// 依次比较
+fn value_in_cents(coin: Coin) -> u8 {
+    match coin {
+        Coin::Penny => 1,
+        Coin::Nickel => {
+            println!("1111");
+            5
+        },
+        _=>(), // 通配符 匹配剩余的情况 需要放在最后面
+    }
+    // if let 针对一种情况处理
+    if let Coin::Penny = coin {
+        // 处理代码
+    }else{
+        // 可以搭配 else使用
+    }
+}
+```
