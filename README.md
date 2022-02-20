@@ -695,3 +695,87 @@ struct IpAddrs {
 }
 
 ```
+
+## Day Package Crate Module
+
+### Crate 类型
+
+./hello_cargo/
+
+ -- binary
+ -- library
+Crate Root : 源代码文件 Rust编译器从这里开始，组成Crate的根module
+
+package:
+  - 包含一个Cargo.toml描述了如何构建crates
+  - 只能包含0-1个library crate
+  - 可以包含任意数量的binart crate
+  - 必须包含一个crate(library或者binary)
+
+- src/main.rs
+  - binary crate 的crate root
+  - crate 名与package名相同
+
+- src/lib.rs
+  - package 包含一个library crate
+  - library crate 的 crate root
+  - crate 名与package 名相同
+
+Cargo 把 crate root 文件交给rustc 来构建library 胡总和binary
+
+- 一个package可以同时包含src/main.rs 和src/lib.rs
+  - 一个binary  crate ,一个library crate
+  - 名称与package名相同
+
+- 一个package可以有多个binary crate:
+  - 文件放在src/bin
+  - 每个文件是单独的binary crate
+
+Module
+    - 在一个crate内 将代码分组
+    - 增加可读性 易于复用
+    - 控制项目私有性 publisc private
+
+建立module 使用mod关键字，module是可以嵌套的  并且可以包含其他项的定义如：struct enum trait 函数 常量等
+
+在Rust中找到某个条目 需要使用路径（path）
+
+路径的两种形式
+    - 绝对路径： 从crate root 开始 ，使用crate名或者字面值crate
+    - 相对路径： 从当前模块开始，使用self,super或者当前模块的标识符
+    - 如果有多个标识符 中间用：：
+
+例子：
+
+```rust
+mod front_of_house {
+    pub mod hosting {
+        pub fn add_to_waitlist() {}
+        fn seat_at_table() {}
+    }
+    mod sarving {
+        fn take_order() {
+            super::super::eat_at_restaurant();
+            self::take_payment();
+        }
+        fn server_prder() {}
+        fn take_payment() {}
+    }
+}
+
+pub fn eat_at_restaurant() {
+    crate::front_of_house::hosting::add_to_waitlist();
+    front_of_house::hosting::add_to_waitlist();
+    super::front_of_house::hosting::add_to_waitlist();
+}
+
+```
+
+> 私有边界
+> 模块不仅可以组织代码 还可以定义私有边界 如果想把函数或者struct设为私有 可将他放到某个模块里
+> rust里所有的条目 函数方法struct enum 模块 常量默认是私有的
+> 父级模块无法访问子模块中的私有条目
+> 子模块可以 调用父模块中的所有条目
+
+struct 可以通过pub修饰成 公共的 但是如果内部的属性不修饰的话 默认属性是私有的
+enum同样是pub修饰 但是修饰之后 enum中的变体同样是公共的
