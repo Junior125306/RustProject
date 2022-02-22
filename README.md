@@ -877,3 +877,141 @@ String 相当于一个 bety数组 所以很多vector的操作适用于string
     // 3.合并现有的 和新的
     println!("{:?}", scores);
 ```
+
+## Day9 panic！与错误
+
+panic! 可能出现在 我们写的代码中以及所依赖的代码中
+
+可通过调用panic! 的函数的回溯信息来定位引起问题的代码
+
+通过设置环境变量RUST_BACKTRACE 得到回溯信息
+
+### Result 枚举
+
+```rust
+    enum Result<T, E>{
+        OK(T),
+        Err(E),
+    }
+    // T：操作成功情况下 OK里返回的数据类型
+    // E：操作失败情况下 Err返回错误的类型
+        let f = File::open("Hello.txt");
+    // let f = match f {
+    //     Ok(file) => file,
+    //     Err(err) => {
+    //         panic!("Error opening file {:?}", err)
+    //     }
+    // };
+    let f = match f {
+        Ok(file) => file,
+        Err(err) => match err.kind() {
+            ErrorKind::NotFound => match File::create("hello.txt") {
+                Ok(fc) => fc,
+                Err(e) => panic!("Error create file {:?}", e),
+            },
+            oe => panic!("Error create file {:?}", err),
+        },
+    };
+```
+### unwrap
+
+match 表达式的一个快捷方法,如果result 结果是ok则调用OK返回的值
+如果是err 则调用panic！宏
+
+```rust
+    let f = File::open("Hello.txt");
+    let f = match f {
+        Ok(file) => file,
+        Err(err) => {
+            panic!("Error opening file {:?}", err)
+        }
+    };
+    // 可以写成
+    let f = File::open("Hello.txt").unwrap();
+```
+
+### expect
+
+和unwrap 类似 但是可以指定错误信息 如：
+
+```rust
+let f = File::open("Hello.txt").expect("无法打开文件");
+```
+
+## 传播错误
+
+```rust
+fn main (){
+    read_username_from_file();
+}
+
+fn read_username_from_file() -> Result<String, Error> {
+    let f = File::open("Hello.txt");
+    let mut f = match f {
+        Ok(file) => file,
+        Err(e) => return Err(e),
+    };
+
+    let mut s = String::new();
+    match f.read_to_string(&mut s) {
+        Ok(_) => Ok(s),
+        Err(e) => Err(e),
+    }
+}
+
+```
+
+### ? 问号运算符 传播错误的一种快捷方式
+
+一种错误传播的快捷方式
+如果result 是ok ok中的值就是表达式的结果，然后继续执行程序
+如果result 是err err就是整个函数的返回值，就像用了return
+
+上面代码可以改写成这样
+
+```rust
+fn read_username_from_file() -> Result<String, Error> {
+    let mut f = File::open("Hello.txt")?;
+    let mut s = String::new();
+    f.read_to_string(&mut s)?;
+    Ok(s)
+}
+```
+
+### ? 与 from
+
+Trait std::convert::From 上的from 函数
+用于错误类型之间的转换
+被？所应用的错误，会隐式的被from函数处理
+当？调用from 函数时
+    他所接受的错误类型会转化为当前函数返回类型所定义的错误类型
+
+用于 针对不同的错误原因 返回同一种错误类型
+    只要每个错误类型实现了转换为岁返回的错误类型的from函数
+
+
+上面代码还可以继续优化
+
+```rust
+    let mut s = String::new();
+    File::open("Hello.txt")?.read_to_string(&mut s)?;
+    Ok(s)
+```
+
+? 只能用于返回类型为Reslt的函数
+
+Box<dyn Error> 是trait对象  简单理解为 任何可能的错误类型
+
+### 何时使用panic!
+
+总体原则 ：当你觉得某些错误是不可回复的时候 代码调用者无法解决或者跳过的时候，当定义一个可能失败的函数时优先考虑result
+
+可以使用panic
+    - 演示某些概念 unwrap
+    - 原型代码 unwrap 、 expect
+    - 测试 unwrap 、 expect
+
+用户调用代码： 传入无意义的参数 ： panic!
+调用外部不可控的代码 返回非法状态，你无法修复：panic!
+如果失败是可以预期的：Result
+当你的代码对值进行操作，首先应该验证这些值 panic!
