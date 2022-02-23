@@ -1015,3 +1015,113 @@ Box<dyn Error> 是trait对象  简单理解为 任何可能的错误类型
 调用外部不可控的代码 返回非法状态，你无法修复：panic!
 如果失败是可以预期的：Result
 当你的代码对值进行操作，首先应该验证这些值 panic!
+
+## Day 10 泛型 、 Trait 、生命周期
+
+### 泛型
+
+可以提高代码的复用能力
+
+```rust
+// struct的泛型
+fn main() {
+    let integer = Point { x: 5, y: 10 };
+    let float = Point { x: 5.0, y: 10.0 };
+}
+
+struct Point<T> {
+    x: T,
+    y: T,
+}
+
+impl<T> Point<T> {
+    fn x(&self) -> &T {
+        &self.x
+    }
+}
+
+
+impl Point<i32> {
+    fn x(&self) -> &i32 {
+        &self.x
+    }
+}
+```
+
+### Trait
+
+与java的接口类似 使用trait定义
+
+```rust
+fn main() {
+    // let integer = Point { x: 5, y: 10 };
+    // let float = Point { x: 5.0, y: 10.0 };
+    let point = Point { x: 12, y: 20 };
+    println!("{}", point.summarize());
+    // x:12,y:20
+    let tweet = Tweet {
+        username: 12.to_string(),
+        content: 20.to_string(),
+    };
+    println!("{}", tweet.summarize());
+    // 12 and 20
+}
+
+pub struct Point {
+    pub x: i32,
+    pub y: i32,
+}
+pub struct Tweet {
+    pub username: String,
+    pub content: String,
+}
+
+pub trait Summary {
+    fn summarize(&self) -> String;
+}
+
+impl Summary for Tweet {
+    fn summarize(&self) -> String {
+        format!("{} and {}", self.username, self.content)
+    }
+}
+
+impl Summary for Point {
+    fn summarize(&self) -> String {
+        format!("x:{},y:{}", self.x, self.y)
+    }
+}
+
+// 表示实现了Sumary trait接口的类
+pub fn notify(item: impl Summary) {
+     println!("{}", item.summarize());
+}
+pub fn notify<T: Summary>(item: T, item1: T) {
+     println!("{}", item.summarize());
+}
+
+// 实现多个trait
+pub fn notify(item: impl Summary + Display) {
+     println!("{}", item.summarize());
+}
+pub fn notify<T: Summary + Display>(item: T) {
+     println!("{}", item.summarize());
+}
+//复杂情况
+pub fn notify<T: Summary + Display,U:Clone + Debug>(a: T, b: U) -> String {
+    format!("Breaking news! {}", a.summarize())
+}
+    ⬇
+pub fn notify<T,U>(a: T, b: U) -> String
+where
+    T: Summary + Display,
+    U: Clone + Debug,
+{
+    format!("Breaking news! {}", a.summarize())
+}
+
+// 指定返回类型实现 trait
+pub fn notify1(s: &str) -> impl Summary{
+
+}
+```
