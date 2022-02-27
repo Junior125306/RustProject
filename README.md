@@ -1287,3 +1287,84 @@ Attribute就是一端代码的元数据
 运行ignore测试  cargo test -- --ignored
 
 单元测试 测试一小段代码 #[cfg(test)]
+
+## Day11 实例学习
+
+- 实例内容接受命令行参数
+- 读取文件
+- 改进模块和错误处理
+- 使用TDD开发库功能
+- 使用环境变量
+- 将错误消息写入标准错误而不是标准输出
+
+main.rs
+```rust
+use minigrep::Config;
+use std::env;
+use std::process;
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    println!("{:?}", args);
+    let config = Config::new(&args).unwrap_or_else(|err| {
+        println!("解析参数获取错误{}", err);
+        process::exit(1);
+    });
+    if let Err(e) = minigrep::run(config) {
+        println!("Application error :{}", e);
+        process::exit(1);
+    }
+}
+
+```
+lib.rs
+```rust
+use std::error::Error;
+use std::fs;
+
+pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
+    let contents = fs::read_to_string(config.filename)?;
+    println!("{}", contents);
+    Ok(())
+}
+pub struct Config {
+    pub query: String,
+    pub filename: String,
+}
+
+impl Config {
+    pub fn new(args: &[String]) -> Result<Config, &'static str> {
+        if args.len() < 3 {
+            return Err("输出参数缺失");
+        }
+        let query = args[1].clone();
+        let filename = args[2].clone();
+        Ok(Config { query, filename })
+    }
+}
+
+pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+    let mut results = Vec::new();
+    for line in contents.lines() {
+        if line.contains(query) {
+            results.push(line);
+        }
+    }
+    results
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn one_result() {
+        let query = "duct";
+        let contents = "\
+        Rust:
+        safe,fast,oriductive.
+        Picl three.";
+        assert_eq!(vec!["safe, fast, oriductive."], search(query, contents));
+    }
+}
+
+```
