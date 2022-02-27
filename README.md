@@ -1209,3 +1209,81 @@ impl<'a> ImportantExcerpt<'a> {
 `'static` 是一个特殊的生命周期  ： 整个程序的持续时间
 
 所有字面值都有一个隐式的 static 生命周期
+
+
+## Day11 测试
+
+- 测试
+  - 函数
+  - 验证非测试代码的功能是否和预期一致
+-  测试函数体（通常）执行的三个操作
+   -  准备数据/状态
+   -  运行被测试的代码
+   -  断言（Assert）结果
+
+测试函数只是一个加了attribute标识的函数
+Attribute就是一端代码的元数据
+
+在函数上加上 `#[test]` 就会把函数变成测试函数
+
+运行 `cargo test` 执行测试函数
+
+```rust
+    #[cfg(test)]
+    mod tests {
+        #[test]
+        fn it_works() {
+            let result = 2 + 2;
+            assert_eq!(result, 4); //断言比较是否相等
+        }
+    }
+```
+`assert!()`  根据参数的bool类型来决定测试是否执行成功
+`assert_eq!()` 比较是否相等
+`assert_ne!()` 比较是否不相等
+
+### 自定义错误信息
+
+```rust
+// 往后面加参数 其他两个方法同样  可以不写{}
+    assert_eq!(result, 5, "ceshi {}", 55555);
+```
+### 检查是否空恐慌panic 使用 should_panic
+
+
+```rust
+    #[cfg(test)]
+    #[cfg(test)]
+    mod tests {
+        #[test]
+        #[should_panic(expected = "错误信息")]
+        fn it_works() {
+            let result = 2 + 2;
+            assert_eq!(result, 4); //断言比较是否相等
+        }
+    }
+```
+
+### 测试中使用 Result<T,E>
+
+```rust
+ #=[test]
+ fn it_works() -> Result<(),String> {
+     if 2+2 == 4{
+         OK(())
+     } else {
+         Err(String::from("two plus two does not equal four"))
+     }
+ }
+```
+
+### cargo test
+
+默认行为： 并行运行 所有测试 捕获（不显示）所有的输出，使读取与测试结果相关的输出更容易
+
+按照测试名称运行测试  cargo rest '函数名称'
+
+忽略测试  可以用 #=[ignore] 标注
+运行ignore测试  cargo test -- --ignored
+
+单元测试 测试一小段代码 #[cfg(test)]
