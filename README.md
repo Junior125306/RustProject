@@ -1368,3 +1368,101 @@ mod tests {
 }
 
 ```
+
+
+## Day 13 闭包 迭代器
+
+> 闭包： 可以捕获其所在环境的匿名函数
+> 匿名函数，可以保存为变量作为参数，可以在一个地方创建闭包在另一个上下文中调用闭包来完成运算
+> 可以从其定义的作用域捕获值
+
+### 例子 - 生成自定义运动计划的程序
+ 目标： 不让用户发生不要必要的等待,仅在必要时调用算法,只调用一次
+
+``` rust
+use std::{thread, time::Duration};
+
+fn main() {
+    let simulated_user_specified_value = 10;
+    let simulated_random_number = 7;
+    generate_workout(simulated_user_specified_value, simulated_random_number)
+}
+
+fn generate_workout(instensity: u32, random_number: u32) {
+    // 声明一个闭包
+    let mut expensive_closure = Cacher::new(|num| {
+        println!("calculation slowly ...");
+        thread::sleep(Duration::from_secs(2));
+        num
+    });
+
+    if instensity < 25 {
+        print!("Today, do {} pushups!", expensive_closure.value(instensity));
+        println!("Next,do {} situps!", expensive_closure.value(instensity));
+    } else {
+        if random_number == 3 {
+            println!("Take a break today! Remeber to stay hydrated!")
+        } else {
+            println!(
+                "Today,run for {} minutes!",
+                expensive_closure.value(instensity)
+            )
+        }
+    }
+}
+
+struct Cacher<T>
+where
+    T: Fn(u32) -> u32,
+{
+    calculation: T,
+    value: Option<u32>,
+}
+
+impl<T> Cacher<T>
+where
+    T: Fn(u32) -> u32,
+{
+    fn new(calculation: T) -> Cacher<T> {
+        Cacher {
+            calculation,
+            value: None,
+        }
+    }
+
+    fn value(&mut self, arg: u32) -> u32 {
+        match self.value {
+            Some(v) => v,
+            None => {
+                let v = (self.calculation)(arg);
+                v
+            }
+        }
+    }
+}
+```
+
+#### 闭包从环境捕获值的方式
+
+1. 取得所有权FnOnce
+2. 可变借用FnMut
+3. 不可变借用Fn
+
+创建闭包时，通过闭包对环境值的使用，Rust推断出具体使用哪个trait:
+    - 所有的闭包都实现了FnOnce
+    - 没有移动捕获变量的实现了FnMut
+    - 无需可变访问波或变量的闭包实现了Fn
+
+`move` 关键字，在参数列表前使用move关键字，可以强制闭包取得它所使用的环境值得所有权
+当将闭包传递给新线程以移动数据使其归属新县城所有时会用得到
+
+```rust
+    let equal = move |z| z == x;
+```
+
+### 迭代器
+
+迭代器模式：对一系列项执行某些任务
+迭代器负责：遍历每个项，确定序列何时遍历完成
+
+Rust 得迭代器：除非调用消费迭代器得方法，否则迭代器本身没有任何效果
