@@ -1,5 +1,29 @@
 use std::{thread, time::Duration};
+extern crate serde;
+/// 把json配置转换成对应的struct
+extern crate serde_json;
 
+use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
+use std::collections::HashMap;
+/// 表的配置，包括主键，字段列表等内容
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Tables {
+    pub key: String,
+    pub fields: HashMap<String, Fields>,
+}
+
+/// 字段定义，包括类型等内容
+#[derive(Debug, Serialize, Deserialize)]
+pub enum Fields {
+    Int { length: u16, minus: bool },
+    Double,
+    String,
+    Datetime,
+    OneToOne(String, String),
+    OneToMany(String, String),
+    ManyToOne(String, String),
+}
 fn main() {
     let v1 = vec![1, 2, 3];
     let v1_iter = v1.iter();
