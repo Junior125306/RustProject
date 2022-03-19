@@ -18,4 +18,5 @@ members = [
   "parallel",
   "Object",
   "moshi",
+  "height_class",
 ]

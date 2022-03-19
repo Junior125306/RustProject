@@ -44,6 +44,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "height_class"
+version = "0.1.0"
+
+[[package]]
 name = "hello_cargo"
 version = "0.1.0"
 dependencies = [
