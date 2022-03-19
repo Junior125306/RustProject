@@ -16,4 +16,5 @@ members = [
   "variables",
   "pointer",
   "parallel",
+  "Object",
 ]
