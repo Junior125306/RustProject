@@ -1,36 +1,6 @@
 #[cfg(test)]
 mod tests {
 
-    // 测试自定义类型
-    #[test]
-    fn json_to_tabl_test() {
-        let test_json = r#"{
-        "t_userinfo": {
-            "key": "f_userinfo_id",
-            "fields": {
-                "f_userinfo_id": {
-                    "Int": {
-                        "length": 25,
-                        "minus": false
-                    }
-                },
-                "f_user_state": "String",
-                "address": {
-                    "OneToOne": ["t_user_address", "f_userinfo_id"]
-                },
-                "sellinggas": {
-                    "OneToMany": ["t_sellinggas", "f_userinfo_id"]
-                },
-                "handplan": {
-                    "OneToMany": ["t_handplan", "f_userinfo_id"]
-                }
-            }
-        }
-    }"#;
-        let tables: Tables = serde_json::from_value(jtest_jsonson.clone())?;
-        println!("============{:?}", tables)
-    }
-
     #[test]
     fn iterator_demo() {
         let v1 = vec![1, 2, 3];

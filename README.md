@@ -1466,3 +1466,216 @@ where
 迭代器负责：遍历每个项，确定序列何时遍历完成
 
 Rust 得迭代器：除非调用消费迭代器得方法，否则迭代器本身没有任何效果
+
+## Day 15  智能指针
+智能指针通常使用struct实现 并且实现了 Deref 和 Drop 这两个trait
+
+### Box<T>
+> 在编译时，某类型大小无法确认。但使用该类型时，上下文却需要知道他的确切大小。
+> 当你有大量数据，想要移交所有权，但需要确保在操作时数据不会被复制
+> 使用某个值时，只关心他是否实现了某个特定的trait 而不关心它的具体类型
+
+### Deref Trait
+> 如果一个类型实现了 Deref Trait ，使我们可以自定义解引用运算符 * 得行为
+> 通过实现Deref 智能指针可以向常规引用一样来处理
+
+**解引用和可变性**
+可以使用derefMut trait 重载可变引用的*运算符
+
+在类型和trait 在下列三种情况发生时， rust会执行deref coercion 
+- 当 `T:Deref<Target=U>`,允许 `&T` 转换为 `&U`
+- 当 `T:DerefMut<Target=U>`,允许 `&mut T` 转换为 `&mut U`
+- 当 `T:deref<Target=U>`,允许 `&mut T` 转换为 `&U`
+
+
+```rust
+    use std::ops::Deref;
+
+    fn main() {
+        let m = MyBox::new(String::from("rust"));
+        // 实现了deref trait后 可以这样写
+        // 因为 deref 会把 &MyBox<String>引用 转换为 &String 引用
+        // 然后因为String实现了deref 从而 &String引用可以转换为&str引用
+        hello(&m);
+        // 如果没有实现的话只能怎么写
+        // hello(&[*m][..]);
+        // my_box()
+        my_deref()
+    }
+
+    // fn my_box() {
+    //     let b = Box::new(5);
+    //     println!("b==={}", b)
+    // }
+    fn hello(name: &str) {
+        print!("hello,{}", name)
+    }
+
+    fn my_deref() {
+        let x = 5;
+        let y = &x;
+        let z = Box::new(x);
+        let m = MyBox::new(x);
+        assert_eq!(5, x);
+        assert_eq!(5, *y);
+        assert_eq!(5, *z);
+        assert_eq!(5, *m);
+    }
+
+    struct MyBox<T>(T);
+
+    impl<T> MyBox<T> {
+        fn new(x: T) -> MyBox<T> {
+            MyBox(x)
+        }
+    }
+
+    impl<T> Deref for MyBox<T> {
+        type Target = T;
+        fn deref(&self) -> &T {
+            &self.0
+        }
+    }
+```
+
+### Drop Trait 
+> 实现 Drop Trait， 可以让我们自定义当值将要离开作用域时发生得动作。
+>  例如文件、网络资源释放。 任何类型都可以实现Drop Trait
+> Drop trait 只要求实现drop 方法
+> Drop trait 在预导入模块里 （prelude）
+
+预导入模块中的drop 不能提前显视调用  但是 `std::mem::drop` 可以提前drop值
+```rust
+impl Drop for TestDrop {
+    fn drop(&mut self) {
+        println!("droping with data {}!", self.data)
+    }
+}
+```
+
+### Rc<T> 引用计数智能指针
+
+> 有时一个值会有多个所有者
+> 为了支持多重所有权  reference coution (引用计数)
+> 追踪所有到值得引用
+> 0 个引用： 该值可以被清理掉
+> 只能用户单线程场景
+
+- Rc<T> 不在预导入模块中
+- Rc::clone(&a)函数: 增加引用计数
+- Rc::strong_count(&a): 获取引用计数
+
+```rust
+    use crate::List::{Cons, Nil};
+    use std::rc::Rc;
+    enum List {
+        Cons(i32, Rc<List>),
+        Nil,
+    }
+    #[test]
+    fn rc_test() {
+        let a = Rc::new(Cons(5, Rc::new(Cons(10, Rc::new(Nil)))));
+        let b = Cons(3, Rc::clone(&a));
+        let b = Cons(4, Rc::clone(&a));
+    }
+```
+
+Rc:clone() 增加引用不会执行数据的深度拷贝操作
+类型得clone() 很多回执行数据的深拷贝操作
+
+### RefCell<T>
+
+与Rc<T> 不同，RefCell<T> 代表了其持有数据得所有权
+
+内部可变性：interior mutability
+
+它允许在支持有不可变应用得前提下对数据进行修改
+
+```rust
+pub trait Messenger {
+    fn send(&self, msg: &str);
+}
+
+pub struct LimitTracker<'a, T: 'a + Messenger> {
+    messenger: &'a T,
+    value: usize,
+    max: usize,
+}
+
+impl<'a, T> LimitTracker<'a, T>
+where
+    T: Messenger,
+{
+    pub fn new(messenger: &T, max: usize) -> LimitTracker<T> {
+        LimitTracker {
+            messenger,
+            value: 0,
+            max,
+        }
+    }
+
+    pub fn set_value(&mut self, value: usize) {
+        self.value = value;
+        let percentage_of_max = self.value as f64 / self.max as f64;
+        if percentage_of_max >= 1.0 {
+            self.messenger.send("quota");
+        } else if percentage_of_max >= 0.9 {
+            self.messenger.send("over 90%")
+        } else if percentage_of_max >= 0.75 {
+            self.messenger.send("over 75")
+        }
+    }
+}
+
+mod tests {
+    use super::*;
+    use std::cell::RefCell;
+    struct Mock {
+        sent: RefCell<Vec<String>>,
+    }
+    impl Mock {
+        fn new() -> Mock {
+            Mock {
+                sent: RefCell::new(vec![]),
+            }
+        }
+    }
+    impl Messenger for Mock {
+        fn send(&self, message: &str) {
+            self.sent.borrow_mut().push(String::from(message))
+        }
+    }
+
+    #[test]
+    fn test() {
+        let mock = Mock::new();
+        let mut limit_tracker = LimitTracker::new(&mock, 100);
+        limit_tracker.set_value(80);
+        assert_eq!(mock.sent.borrow().len(), 1);
+    }
+}
+```
+
+```rust
+#[derive(Debug)]
+enum List {
+    Cons(Rc<RefCell<i32>>, Rc<List>),
+    Nil,
+}
+
+use crate::List::{Cons, Nil};
+use std::cell::RefCell;
+use std::rc::Rc;
+
+fn main() {
+    let value = Rc::new(RefCell::new(5));
+    let a = Rc::new(Cons(Rc::clone(&value), Rc::new(Nil)));
+    let b = Cons(Rc::new(RefCell::new(6)), Rc::clone(&a));
+    let c = Cons(Rc::new(RefCell::new(10)), Rc::clone(&a));
+    *value.borrow_mut() += 10;
+    println!("a after = {:?}", a);
+    println!("b after = {:?}", b);
+    println!("c after = {:?}", c);
+}
+
+```
