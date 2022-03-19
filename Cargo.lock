@@ -71,6 +71,10 @@ name = "minigrep"
 version = "0.1.0"
 
 [[package]]
+name = "moshi"
+version = "0.1.0"
+
+[[package]]
 name = "owner"
 version = "0.1.0"
 

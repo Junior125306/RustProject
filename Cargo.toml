@@ -17,4 +17,5 @@ members = [
   "pointer",
   "parallel",
   "Object",
+  "moshi",
 ]
