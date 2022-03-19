@@ -19,4 +19,5 @@ members = [
   "Object",
   "moshi",
   "height_class",
+  "web_project",
 ]
