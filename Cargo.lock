@@ -75,6 +75,10 @@ name = "panic_project"
 version = "0.1.0"
 
 [[package]]
+name = "parallel"
+version = "0.1.0"
+
+[[package]]
 name = "pointer"
 version = "0.1.0"
 

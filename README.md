@@ -1679,3 +1679,174 @@ fn main() {
 }
 
 ```
+
+## Day 16  并发、多线程
+
+创建线程 参数是一个闭包
+```rust
+use std::thread;
+use std::time::Duration;
+fn main() {
+    thread::spawn(|| {
+        for i in 1..10 {
+            println!("hi number {} from the spawned thread!", i);
+            thread::sleep(Duration::from_millis(1));
+        }
+    });
+
+    for i in 1..5 {
+        println!("hi number {} from the main thread", i);
+        thread::sleep(Duration::from_millis(1));
+    }
+}
+// 等待线程执行完 写法
+fn main() {
+    let handle = thread::spawn(|| {
+        for i in 1..10 {
+            println!("hi number {} from the spawned thread!", i);
+            thread::sleep(Duration::from_millis(1));
+        }
+    });
+    //handle.join().unwrap();// 放到这里的话就是等到分线程执行完才执行主线程
+    for i in 1..5 {
+        println!("hi number {} from the main thread", i);
+        thread::sleep(Duration::from_millis(1));
+    }
+    handle.join().unwrap();
+}
+```
+
+### 线程中的消息传递  Channel
+
+```rust
+let (tx, rx) = mpsc::channel();
+
+thread::spawn(move || {
+    let val = String::from("hi");
+    tx.send(val).unwrap();
+});
+
+let received = rx.recv().unwrap();
+println!("Got:{}", received);
+```
+
+recv方法:组织当前线程执行，知道Channel中有值被传过来
+    - 一旦有值被收到，就返回Result<T,E>
+    - 当发送端关闭，就回收到一个错误
+try_recv方法: 不会阻塞,
+    -立即返回Result<T,E> 有数据达到返回OK 否则返回错误
+    通常回使用循环调用来检查try_recv结果
+
+```rust
+let (tx, rx) = mpsc::channel();
+let tx1 = mpsc::Sender::clone(&tx);
+thread::spawn(move || {
+    let vals = vec![
+        String::from("1:hi"),
+        String::from("2:from"),
+        String::from("3:the"),
+        String::from("4:thread"),
+    ];
+    for val in vals {
+        tx1.send(val).unwrap();
+        thread::sleep(Duration::from_millis(200));
+    }
+});
+thread::spawn(move || {
+    let vals = vec![
+        String::from("hi"),
+        String::from("from"),
+        String::from("the"),
+        String::from("thread"),
+    ];
+    for val in vals {
+        tx.send(val).unwrap();
+        thread::sleep(Duration::from_millis(200));
+    }
+});
+
+for received in rx {
+    println!("Got:{}", received)
+}
+```
+
+### Mutex
+
+使用Mutex 来每次只允许一个线程来访问数据
+mutex是互斥锁 mutual exclusion 互斥锁得缩写
+在同一时刻，Mutex只允许一个线程来访问某些数据
+
+想要访问数据
+- 线程必须首先获取互斥锁（lock）
+  - lock 数据结构是mutex得一部分，他能跟踪谁对数据有独占访问权
+- mutex通常被描述为：通过锁定系统来保护它所持有的数据
+
+mutex 两条规则
+
+在使用数据之前必须尝试获取锁
+在使用完mutex保护的数据后，必须对数据进行解锁，以便其他线程可以获取锁。
+
+mutex API
+通过Mutex::new 来创建 Mutex<T>
+ - Mutex<T>是一个智能指针
+访问数据前，通过lock来获取锁
+    - 会阻塞线程
+    - lock可能会失败
+    - 返回MutexGuard（只能指针，实现了Deref和Drop）
+
+mutex实例
+
+```rust
+let m = Mutex::new(5);
+{
+    let mut num = m.lock().unwrap();
+    *num = 6;
+}
+println!("m = {:?}", m)
+```
+多线程多引用实例   Rc只适用于单线程  Arc与Rc接口api一样 只是实现了原子性  但是更加消费性能
+```rust
+use std::{
+    sync::{Arc, Mutex},
+    thread,
+};
+// use std::thread;
+// use std::time::Duration;
+fn main() {
+    let counter = Arc::new(Mutex::new(0));
+    let mut handles = vec![];
+
+    for _ in 0..10 {
+        let counter = Arc::clone(&counter);
+        let handle = thread::spawn(move || {
+            let mut num = counter.lock().unwrap();
+            *num += 1;
+        });
+        handles.push(handle);
+    }
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
+    println!("Result :{}", *counter.lock().unwrap());
+}
+```
+
+RefCell<T>/Rc<T> vs Mutex<T>/Arc<T>
+
+Mutex<T> 提供了内部可变性，和Cell家族一样
+我们使用RefCell<T> 来改变Rc<T> 里面的内容
+我们使用Mutex<T> 来改变Arc<T> 里面的内容
+注意 Mutex<T> 有死锁得风险
+
+### 使用send 和 Sync Trait 来扩展并发
+
+rust语言的并发特性较少，目前讲的并发特性都来自于标准库 而不是语言本身
+无需局限于标准库得并发 可以自己实现并发
+在Rust中有两个并发概念
+ - std::marker::Sync 和 std::marker::Send 这两个trait
+
+
+**Send** 允许线程间转移所有权
+
+**Sync** 允许多线程进行访问
