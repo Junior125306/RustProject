@@ -1,0 +1,14 @@
+{
+    "title":"Person",
+    "type":"object",
+    "properties":{
+        "firstName":{
+            "type":"String",
+            "descroption":"first name"
+        },
+        "lastName":{
+            "type":"String",
+            "description":"last name"
+        }
+    }
+}

@@ -20,4 +20,6 @@ members = [
   "moshi",
   "height_class",
   "web_project",
+  "proc_macro_basic",
+  "proc_macro_build",
 ]
